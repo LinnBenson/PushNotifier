@@ -23,6 +23,7 @@ return new class extends PluginProvider {
         $this->description = '多渠道过滤式推送记录系统。';
         $this->version = '1.0.2';
         $this->author = 'System';
+        $this->source = 'https://github.com/LinnBenson/PushNotifier/archive/refs/heads/main.zip';
         $this->setType( 1 );
     }
 
