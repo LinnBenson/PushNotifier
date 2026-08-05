@@ -52,6 +52,20 @@ class PushNotifierTable extends Page implements HasTable {
     protected string $view = 'PushNotifier::push-notifier-table';
 
     /**
+     * 获取头部操作。
+     * 提供重新加载通知记录的刷新按钮。
+     * @return array<int, Action> 头部操作按钮
+     */
+    protected function getHeaderActions(): array {
+        return [
+            Action::make( 'refresh' )
+                ->label( '刷新' )
+                ->icon( Heroicon::OutlinedArrowPath )
+                ->action( fn (): null => null ),
+        ];
+    }
+
+    /**
      * 判断是否允许访问通知记录页面。
      * 数据表不存在时隐藏菜单并阻止页面查询。
      * @return bool 是否允许访问
