@@ -39,15 +39,9 @@ class PushNotifierTable extends Page implements HasTable {
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBellAlert;
 
-    protected static string|UnitEnum|null $navigationGroup = '管理员控制';
-
-    protected static ?string $navigationLabel = '通知记录';
-
-    protected static ?string $title = '推送通知记录';
-
     protected static ?string $slug = 'push-notifier-records';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 10;
 
     protected string $view = 'PushNotifier::push-notifier-table';
 
@@ -219,10 +213,10 @@ class PushNotifierTable extends Page implements HasTable {
     }
 
     /**
-     * 获取页面面包屑。
-     * @return array<string> 面包屑列表
+     * 页面信息
      */
-    public function getBreadcrumbs(): array {
-        return ['管理员控制', '通知记录'];
-    }
+    public function getBreadcrumbs(): array { return [__( 'filament.groups.other' ), '通知记录']; }
+    public static function getNavigationLabel(): string { return '通知记录'; }
+    public function getTitle(): string { return '推送通知记录'; }
+    public static function getNavigationGroup(): string|UnitEnum|null { return __( 'filament.groups.other' ); }
 }

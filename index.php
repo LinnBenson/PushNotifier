@@ -58,7 +58,7 @@ return new class extends PluginProvider {
      * @return void
      */
     public function registerAdminPage( Panel $panel ): void {
-        config()->set( 'filament.navigation_levels.push_notifier_records', config( 'filament.navigation_levels.plugin_management', 99899 ) );
+        config()->set( 'filament.navigation_levels.push_notifier_records', config( 'filament.navigation_levels.plugin_management', 99990 ) );
         $panel->pages( [
             PushNotifierTable::class,
         ] );
