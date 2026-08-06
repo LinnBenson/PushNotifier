@@ -182,10 +182,10 @@ class PushController extends Controller {
             'body' => $content
         ];
         if ( $source ) {
-            $postData = array_merge( $postData, [
-                'icon' => config( 'app.url' )."/assets/icons/source/{$source}.png?version=".plugin( 'PushNotifier' )->version,
-                'group' => $source,
-            ]);
+            $postData['source'] = $source;
+            if ( file_exists( public_path( "assets/icons/source/{$source}.png" ) ) ) {
+                $postData['icon'] = config( 'app.url' )."/assets/icons/source/{$source}.png?version=".plugin( 'PushNotifier' )->version;
+            }
         }
         $payload = array_filter( $postData, static fn ( mixed $value ): bool => $value !== null && $value !== '' );
         try {
