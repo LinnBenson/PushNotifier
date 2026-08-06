@@ -43,7 +43,6 @@
                 <span wire:loading wire:target="resendNotification({{ $record->getKey() }})">推送中</span>
             </button>
         </div>
-        <h2>{{ $record->title ?: '无标题通知' }}</h2>
     </header>
 
     {{-- 通知正文 --}}

@@ -289,7 +289,7 @@ class PushNotifierTable extends Page implements HasTable {
             ->label( '查看' )
             ->icon( Heroicon::OutlinedEye )
             ->color( 'gray' )
-            ->modalHeading( fn ( NotifierRecord $record ): string => "通知记录 #{$record->getKey()}" )
+            ->modalHeading( fn ( NotifierRecord $record ): string => $record->title ?? '查看通知详情' )
             ->modalContent( fn ( NotifierRecord $record ) => view( 'PushNotifier::push-notifier-details', [
                 'record' => $record,
             ] ) )
