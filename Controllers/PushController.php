@@ -265,11 +265,11 @@ class PushController extends Controller {
         if ( $uid === 0 ) {
             switch ( $type ) {
                 case 'telegram':
-                    return $this->config( 'telegram' );
+                    return plugin( 'PushNotifier' )->config( 'telegram' );
                 case 'bark':
-                    return $this->config( 'bark' );
+                    return plugin( 'PushNotifier' )->config( 'bark' );
                 case 'email':
-                    return $this->config( 'email' );
+                    return plugin( 'PushNotifier' )->config( 'email' );
                 default:
                     return null;
             }
