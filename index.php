@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Log;
 use App\Plugins\PushNotifier\Models\NotifierRecord;
 use App\Plugins\PushNotifier\Support\BuildMessageService;
+use App\Plugins\PushNotifier\Support\SendNotificationJob;
 
 /**
  * Push Notifier Plugin
@@ -120,6 +121,22 @@ return new class extends PluginProvider {
             public function source( ?string $source = null ): self {
                 $this->sourceValue = $source;
                 return $this;
+            }
+            // 异步发送通知
+            public function async( ?string $recipient = null ): bool {
+                try {
+                    SendNotificationJob::dispatch(
+                        $this->title,
+                        $this->content,
+                        $this->typeValue,
+                        $this->sourceValue,
+                        $recipient
+                    );
+                    return true;
+                } catch ( Throwable $throwable ) {
+                    Log::error( '异步发送通知失败：'.$throwable->getMessage() );
+                    return false;
+                }
             }
             // 发送通知
             public function request( ?string $recipient = null ): bool {

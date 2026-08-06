@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Mail\Message;
 use App\Plugins\PushNotifier\Support\BuildMessageService;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -55,15 +56,34 @@ class PushController extends Controller {
         // 获取接收人
         $recipient = $this->getRecipient( $uid, $type );
         if ( !$recipient ) { return echoJson( 2, ['base.error.prohibit'] ); }
-        // 查询近 15 秒内是否有相同的通知记录，防止重复发送
-        $recentRecord = NotifierRecord::where( 'type', $type )
-            ->where( 'recipient', $recipient )
-            ->where( 'source', $data['source'] )
-            ->where( 'title', $data['title'] )
-            ->where( 'content', $data['content'] )
-            ->where( 'created_at', '>=', now()->subSeconds( 15 ) )
-            ->first();
-        if ( $recentRecord ) { return echoJson( 2, ['base.error.limit'] ); }
+        // 查询近 15 秒内是否有相同的请求记录，防止重复发送
+        $duplicateKey = 'push_notifier:duplicate:'.hash(
+            'sha256',
+            json_encode( [
+                'type' => $type,
+                'recipient' => $recipient,
+                'source' => $data['source'],
+                'title' => $data['title'],
+                'content' => $data['content'],
+            ], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES )
+        );
+        if ( !Cache::add( $duplicateKey, true, now()->addSeconds( 15 ) ) ) {
+            return echoJson( 2, ['base.error.limit'] );
+        }
+        if ( getQueueWorkerStatus() ) {
+            // 队列工作进程正在运行，使用异步发送
+            $async = plugin( 'PushNotifier' )->send( $data['title'], $data['content'] )
+                    ->type( $type )
+                    ->source( $data['source'] )
+                    ->async( $recipient );
+            if ( $async ) {
+                return echoJson( true, ['base.send'] );
+            } else {
+                // 没有成功发送，释放占位，允许再次尝试
+                Cache::forget( $duplicateKey );
+                return echoJson( false, ['base.send'] );
+            }
+        }
         switch ( $type ) {
             case 'telegram':
                 return $this->telegram( $uid, $recipient, $data['source'] ?? null, $data['title'], $data['content'] );
@@ -123,7 +143,7 @@ class PushController extends Controller {
             return $this->saveRecord( $uid, 'telegram', $user, $source, $title, $content, $resultStatus, $resultData );
         }catch ( Throwable $exception ) {
             return $this->saveRecord( $uid, 'telegram', $user, $source, $title, $content, false, [
-                'error' => 'Email request failed.',
+                'error' => 'Telegram request failed.',
                 'exception' => $exception->getMessage(),
             ] );
         }
