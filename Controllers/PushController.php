@@ -142,7 +142,7 @@ class PushController extends Controller {
             'device_key' => $device,
             'title' => $title,
             'body' => $content,
-            'icon' => config( 'app.url' )."/assets/icons/source/{$source}.png",
+            'icon' => config( 'app.url' )."/assets/icons/source/{$source}.png?version=".plugin( 'PushNotifier' )->version,
             'group' => $source,
         ], static fn ( mixed $value ): bool => $value !== null && $value !== '' );
         try {
