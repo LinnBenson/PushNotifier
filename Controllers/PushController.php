@@ -80,7 +80,7 @@ class PushController extends Controller {
     public function telegram( int $uid, ?string $source, ?string $title, ?string $content ): JsonResponse {
         $api = setting( 'system.telegram.api' );
         $user = $this->getRecipient( $uid, 'telegram' );
-        if ( !$api || !$user ) {
+        if ( !$api || empty( $user ) ) {
             return $this->saveRecord( $uid, 'telegram', $user, $source, $title, $content, false, 'Telegram API or UID is not configured.' );
         }
         $escapedDivider = $this->escapeTelegramMarkdownV2( '-----' );
@@ -143,7 +143,7 @@ class PushController extends Controller {
     public function bark( int $uid, ?string $source, ?string $title, ?string $content ): JsonResponse {
         $host = setting( 'system.bark.host' );
         $device = $this->getRecipient( $uid, 'bark' );
-        if ( !$host || !$device ) {
+        if ( !$host || empty( $device ) ) {
             return $this->saveRecord( $uid, 'bark', $device, $source, $title, $content, false, 'Bark host or device is not configured.' );
         }
         $payload = array_filter( [
@@ -188,7 +188,7 @@ class PushController extends Controller {
         $username = setting( 'system.mail.username' ); // SMTP 用户名
         $password = setting( 'system.mail.password' ); // SMTP 密码或授权码
         $recipient = $this->getRecipient( $uid, 'email' ); // 收件人邮箱
-        if ( !$host || !$port || !$username || !$password || !$recipient ) {
+        if ( !$host || !$port || !$username || !$password || empty( $recipient ) ) {
             return $this->saveRecord( $uid, 'email', $recipient, $source, $title, $content, false, 'The mail server configuration is incomplete.' );
         }
         $recipient = (string) $recipient;
@@ -265,11 +265,11 @@ class PushController extends Controller {
         if ( $uid === 0 ) {
             switch ( $type ) {
                 case 'telegram':
-                    return setting( 'system.telegram.uid' );
+                    return $this->config( 'telegram' );
                 case 'bark':
-                    return setting( 'system.bark.device' );
+                    return $this->config( 'bark' );
                 case 'email':
-                    return setting( 'system.mail.recipient' );
+                    return $this->config( 'email' );
                 default:
                     return null;
             }
