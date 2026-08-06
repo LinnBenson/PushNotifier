@@ -21,7 +21,7 @@ return new class extends PluginProvider {
     public function __construct() {
         $this->name = '推送通知器';
         $this->description = '多渠道过滤式推送记录系统。';
-        $this->version = '1.0.7';
+        $this->version = '1.0.8';
         $this->author = 'System';
         $this->source = 'https://github.com/LinnBenson/PushNotifier/archive/refs/heads/main.zip';
         $this->setType( 1 );
