@@ -49,6 +49,14 @@ class PushController extends Controller {
         $validated = $validator->validated();
         $type = $validated['type'];
         $data = BuildMessageService::build( $validated['source'] ?? null, $validated['title'], $validated['content'] );
+        // 查询近 15 秒内是否有相同的通知记录，防止重复发送
+        $recentRecord = NotifierRecord::where( 'type', $type )
+            ->where( 'source', $data['source'] )
+            ->where( 'title', $data['title'] )
+            ->where( 'content', $data['content'] )
+            ->where( 'created_at', '>=', now()->subSeconds( 15 ) )
+            ->first();
+        if ( $recentRecord ) { return echoJson( 2, ['base.error.limit'] ); }
         switch ( $type ) {
             case 'telegram':
                 return $this->telegram( $uid, $data['source'] ?? null, $data['title'], $data['content'] );
@@ -206,7 +214,8 @@ class PushController extends Controller {
                     ->subject( $title );
             } );
             return $this->saveRecord( $uid, 'email', $recipient, $source, $title, $content, true, 'Email sent successfully.' );
-        }catch ( Throwable ) {
+        }catch ( Throwable $exception ) {
+            report( $exception );
             return $this->saveRecord( $uid, 'email', $recipient, $source, $title, $content, false, 'Email request failed.' );
         }
     }
