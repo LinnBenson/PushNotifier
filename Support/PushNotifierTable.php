@@ -115,11 +115,8 @@ class PushNotifierTable extends Page implements HasTable {
                     ->limit( 30 )
                     ->wrap()
                     ->toggleable()
-                    ->tooltip(function ( NotifierRecord $record ): ?string {
-                        if ( Str::length( (string) $record->content ) <= 300 ) {
-                            return null;
-                        }
-                        return $record->content;
+                    ->tooltip( function ( NotifierRecord $record ): ?string {
+                        return Str::limit( (string) $record->content, 300 );
                     })
                     ->action( $this->viewRecordAction( 'viewContent' ) ),
                 IconColumn::make( 'result_status' )
