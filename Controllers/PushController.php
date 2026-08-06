@@ -97,7 +97,7 @@ class PushController extends Controller {
         $messageParts = array_filter( [
             $escapedTitle ? "*{$escapedTitle}*\n{$escapedDivider}" : null,
             $escapedContent,
-            $escapedSource ? "\n{$escapedDivider}\n*Source:* {$escapedSource}" : null,
+            $escapedSource ? "{$escapedDivider}\n*Source:* {$escapedSource}" : null,
         ], static fn ( mixed $value ): bool => $value !== null && $value !== '' );
         $message = implode( "\n", $messageParts );
         if ( Str::length( $message ) > 4096 ) {
