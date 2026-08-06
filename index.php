@@ -22,7 +22,7 @@ return new class extends PluginProvider {
     public function __construct() {
         $this->name = '推送通知器';
         $this->description = '多渠道过滤式推送记录系统。';
-        $this->version = '1.2.0';
+        $this->version = '1.2.1';
         $this->author = 'System';
         $this->source = 'https://github.com/LinnBenson/PushNotifier/archive/refs/heads/main.zip';
         $this->setType( 1 );
@@ -94,29 +94,56 @@ return new class extends PluginProvider {
     }
 
     /**
-     * 发送通知。
-     * @param string $title 消息标题
-     * @param string $content 消息内容
-     * @param string|null $source 消息来源
-     * @param string|null $type 通知类型（telegram、bark、email）
-     * @return bool 发送成功返回 true，否则返回 false
+     * 发送通知工具
+     * @param string $title 通知标题
+     * @param string $content 通知内容
+     * @return object 返回一个可链式调用的对象，支持设置通知类型、来源和接收人，并最终调用 request() 方法发送通知。
      */
-    public function send( string $title, string $content, ?string $source = null, ?string $type = null ): bool {
-        if ( !$type ) { $type = $this->config( 'default' ); }
-        $data = BuildMessageService::build( $source, $title, $content );
-        switch ( $type ) {
-            case 'telegram':
-                $result = ( new PushController() )->telegram( 0, $data['source'] ?? null, $data['title'], $data['content'] );
-                break;
-            case 'bark':
-                $result = ( new PushController() )->bark( 0, $data['source'] ?? null, $data['title'], $data['content'] );
-                break;
-            case 'email':
-                $result = ( new PushController() )->email( 0, $data['source'] ?? null, $data['title'], $data['content'] );
-                break;
-            default:
-                return false;
-        }
-        return true;
+    public function send( string $title, string $content ): object {
+        $defaultType = $this->config( 'default' );
+        return new class( $title, $content, $defaultType ) {
+            private ?string $typeValue = null;
+            private string $title;
+            private string $content;
+            private ?string $sourceValue = null;
+            public function __construct( string $title, string $content, ?string $type = null ) {
+                $this->title = $title;
+                $this->content = $content;
+                $this->typeValue = $type;
+            }
+            // 设置通知类型
+            public function type( ?string $type = null ): self {
+                $this->typeValue = $type;
+                return $this;
+            }
+            // 设置通知来源
+            public function source( ?string $source = null ): self {
+                $this->sourceValue = $source;
+                return $this;
+            }
+            // 发送通知
+            public function request( ?string $recipient = null ): bool {
+                $PushController = new PushController();
+                $PushController->setCli();
+                $uid = 0;
+                $recipient = $recipient === null ? $PushController->getRecipient( $uid, $this->typeValue ) : $recipient;
+                if ( empty( $recipient ) ) { return false; }
+                $data = BuildMessageService::build( $this->sourceValue, $this->title, $this->content );
+                switch ( $this->typeValue ) {
+                    case 'telegram':
+                        $result = $PushController->telegram( $uid, $recipient, $data['source'] ?? null, $data['title'], $data['content'] );
+                        break;
+                    case 'bark':
+                        $result = $PushController->bark( $uid, $recipient, $data['source'] ?? null, $data['title'], $data['content'] );
+                        break;
+                    case 'email':
+                        $result = $PushController->email( $uid, $recipient, $data['source'] ?? null, $data['title'], $data['content'] );
+                        break;
+                    default:
+                        return false;
+                }
+                return $result === true;
+            }
+        };
     }
 };

@@ -21,6 +21,9 @@ use Throwable;
  * @package App\Plugins\PushNotifier\Controllers
  */
 class PushController extends Controller {
+    // 默认使用 HTTP 模式
+    public string $model = 'http';
+    public function setCli() { $this->model = 'cli'; }
     /**
      * 主入口
      * @return JsonResponse JSON 响应
@@ -28,8 +31,8 @@ class PushController extends Controller {
     public function index( Request $request ): JsonResponse {
         // 验证 Token
         $token = $request->input( 'token', null );
-        if ( $token !== plugin( 'PushNotifier' )->config( 'token' ) ) {
-            return echoJson( 3, ['base.error.limit'] );
+        if ( !$token || $token !== plugin( 'PushNotifier' )->config( 'token' ) ) {
+            return echoJson( 3, ['base.error.403'] );
         }
         $uid = 0;
         // 验证并读取传入参数
@@ -49,8 +52,12 @@ class PushController extends Controller {
         $validated = $validator->validated();
         $type = $validated['type'];
         $data = BuildMessageService::build( $validated['source'] ?? null, $validated['title'], $validated['content'] );
+        // 获取接收人
+        $recipient = $this->getRecipient( $uid, $type );
+        if ( !$recipient ) { return echoJson( 2, ['base.error.prohibit'] ); }
         // 查询近 15 秒内是否有相同的通知记录，防止重复发送
         $recentRecord = NotifierRecord::where( 'type', $type )
+            ->where( 'recipient', $recipient )
             ->where( 'source', $data['source'] )
             ->where( 'title', $data['title'] )
             ->where( 'content', $data['content'] )
@@ -59,11 +66,11 @@ class PushController extends Controller {
         if ( $recentRecord ) { return echoJson( 2, ['base.error.limit'] ); }
         switch ( $type ) {
             case 'telegram':
-                return $this->telegram( $uid, $data['source'] ?? null, $data['title'], $data['content'] );
+                return $this->telegram( $uid, $recipient, $data['source'] ?? null, $data['title'], $data['content'] );
             case 'bark':
-                return $this->bark( $uid, $data['source'] ?? null, $data['title'], $data['content'] );
+                return $this->bark( $uid, $recipient, $data['source'] ?? null, $data['title'], $data['content'] );
             case 'email':
-                return $this->email( $uid, $data['source'] ?? null, $data['title'], $data['content'] );
+                return $this->email( $uid, $recipient, $data['source'] ?? null, $data['title'], $data['content'] );
             default:
                 return echoJson( 2, ['base.error.input'] );
         }
@@ -72,15 +79,15 @@ class PushController extends Controller {
     /**
      * 发送 Telegram 通知
      * @param int $uid 用户 UID
+     * @param string $user 接收人
      * @param string|null $source 通知来源
      * @param string|null $title 通知标题
      * @param string|null $content 通知内容
-     * @return JsonResponse JSON 响应
+     * @return JsonResponse|bool JSON 响应或布尔值
      */
-    public function telegram( int $uid, ?string $source, ?string $title, ?string $content ): JsonResponse {
+    public function telegram( int $uid, string $user, ?string $source, ?string $title, ?string $content ): JsonResponse|bool {
         $api = setting( 'system.telegram.api' );
-        $user = $this->getRecipient( $uid, 'telegram' );
-        if ( !$api || empty( $user ) ) {
+        if ( !$api ) {
             return $this->saveRecord( $uid, 'telegram', $user, $source, $title, $content, false, 'Telegram API or UID is not configured.' );
         }
         $escapedDivider = $this->escapeTelegramMarkdownV2( '-----' );
@@ -114,8 +121,11 @@ class PushController extends Controller {
             ];
             $resultStatus = $response->successful() && data_get( $responseData, 'ok' ) === true;
             return $this->saveRecord( $uid, 'telegram', $user, $source, $title, $content, $resultStatus, $resultData );
-        }catch ( Throwable ) {
-            return $this->saveRecord( $uid, 'telegram', $user, $source, $title, $content, false, 'Telegram request failed.' );
+        }catch ( Throwable $exception ) {
+            return $this->saveRecord( $uid, 'telegram', $user, $source, $title, $content, false, [
+                'error' => 'Email request failed.',
+                'exception' => $exception->getMessage(),
+            ] );
         }
     }
 
@@ -135,24 +145,29 @@ class PushController extends Controller {
     /**
      * 发送 Bark 通知
      * @param int $uid 用户 UID
+     * @param string $device 接收设备码
      * @param string|null $source 通知来源
      * @param string|null $title 通知标题
      * @param string|null $content 通知内容
-     * @return JsonResponse JSON 响应
+     * @return JsonResponse|bool JSON 响应或布尔值
      */
-    public function bark( int $uid, ?string $source, ?string $title, ?string $content ): JsonResponse {
+    public function bark( int $uid, string $device, ?string $source, ?string $title, ?string $content ): JsonResponse|bool {
         $host = setting( 'system.bark.host' );
-        $device = $this->getRecipient( $uid, 'bark' );
-        if ( !$host || empty( $device ) ) {
+        if ( !$host ) {
             return $this->saveRecord( $uid, 'bark', $device, $source, $title, $content, false, 'Bark host or device is not configured.' );
         }
-        $payload = array_filter( [
+        $postData = [
             'device_key' => $device,
             'title' => $title,
-            'body' => $content,
-            'icon' => config( 'app.url' )."/assets/icons/source/{$source}.png?version=".plugin( 'PushNotifier' )->version,
-            'group' => $source,
-        ], static fn ( mixed $value ): bool => $value !== null && $value !== '' );
+            'body' => $content
+        ];
+        if ( $source ) {
+            $postData = array_merge( $postData, [
+                'icon' => config( 'app.url' )."/assets/icons/source/{$source}.png?version=".plugin( 'PushNotifier' )->version,
+                'group' => $source,
+            ]);
+        }
+        $payload = array_filter( $postData, static fn ( mixed $value ): bool => $value !== null && $value !== '' );
         try {
             $response = Http::acceptJson()
                 ->asJson()
@@ -177,26 +192,26 @@ class PushController extends Controller {
     /**
      * 发送 Email 通知
      * @param int $uid 用户 UID
+     * @param string $recipient 接收人
      * @param string|null $source 通知来源
      * @param string|null $title 通知标题
      * @param string|null $content 通知内容
-     * @return JsonResponse JSON 响应
+     * @return JsonResponse|bool JSON 响应或布尔值
      */
-    public function email( int $uid, ?string $source, ?string $title, ?string $content ): JsonResponse {
+    public function email( int $uid, string $recipient, ?string $source, ?string $title, ?string $content ): JsonResponse|bool {
         $host = setting( 'system.mail.host' ); // SMTP 主机
         $port = setting( 'system.mail.port' ); // SMTP 端口
         $username = setting( 'system.mail.username' ); // SMTP 用户名
         $password = setting( 'system.mail.password' ); // SMTP 密码或授权码
         $scheme = setting( 'system.mail.scheme', null ); // SMTP 协议
         $scheme = $scheme === 'null' || empty( $scheme ) ? null : $scheme;
-        $recipient = $this->getRecipient( $uid, 'email' ); // 收件人邮箱
-        if ( !$host || !$port || !$username || !$password || empty( $recipient ) ) {
+        if ( !$host || !$port || !$username || !$password ) {
             return $this->saveRecord( $uid, 'email', $recipient, $source, $title, $content, false, 'The mail server configuration is incomplete.' );
         }
         $recipient = (string) $recipient;
         $title = (string) $title;
         $senderName = (string) setting( 'app.title' );
-        $mailContent = $source ? "{$content}\n\nSource: {$source}" : (string) $content;
+        $mailContent = $content;
         try {
             config()->set( [
                 'mail.mailers.smtp.scheme' => $scheme,
@@ -219,8 +234,10 @@ class PushController extends Controller {
             } );
             return $this->saveRecord( $uid, 'email', $recipient, $source, $title, $content, true, 'Email sent successfully.' );
         }catch ( Throwable $exception ) {
-            report( $exception );
-            return $this->saveRecord( $uid, 'email', $recipient, $source, $title, $content, false, 'Email request failed.' );
+            return $this->saveRecord( $uid, 'email', $recipient, $source, $title, $content, false, [
+                'error' => 'Email request failed.',
+                'exception' => $exception->getMessage(),
+            ]);
         }
     }
 
@@ -234,9 +251,9 @@ class PushController extends Controller {
      * @param string|null $content 通知内容
      * @param bool $resultStatus 通知结果状态
      * @param mixed $resultData 通知结果数据
-     * @return JsonResponse JSON 响应
+     * @return JsonResponse|bool JSON 响应或布尔值
      */
-    private function saveRecord( int $uid, string $type, ?string $recipient, ?string $source, ?string $title, ?string $content, bool $resultStatus, array|string|null $resultData ): JsonResponse {
+    private function saveRecord( int $uid, string $type, ?string $recipient, ?string $source, ?string $title, ?string $content, bool $resultStatus, array|string|null $resultData ): JsonResponse|bool {
         if ( $resultStatus === true ) { $resultData = 'Push complete.'; }
         NotifierRecord::create( [
             'uid' => $uid,
@@ -254,16 +271,16 @@ class PushController extends Controller {
             ]),
             'result_data' => is_array( $resultData ) ? json_encode( $resultData ) : $resultData,
         ] );
-        return echoJson( $resultStatus, ['base.send'] );
+        return $this->model === 'http' ? echoJson( $resultStatus, ['base.send'] ) : $resultStatus;
     }
 
     /**
      * 获取接收人
      * @param int $uid 用户 UID
-     * @param string $type 通知类型
+     * @param string|null $type 通知类型
      * @return string|null 接收人
      */
-    private function getRecipient( int $uid, string $type ): ?string {
+    public function getRecipient( int $uid, ?string $type ): ?string {
         if ( $uid === 0 ) {
             switch ( $type ) {
                 case 'telegram':

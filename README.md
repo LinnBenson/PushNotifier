@@ -11,10 +11,10 @@
 - email: E-mail 默认收件人
 
 ### 可调用方法
-- `plugin('PushNotifier')->send( $title, $content, $source = null, $type = null )`
-  - 用于通过代码发送通知，参数说明：
-    - $title: string 消息标题
-    - $content: string 消息内容
-    - $source: string|null 消息来源（可选）
-    - $type: string|null 通知类型（可选，默认使用配置中的 default 值）
-  - returns: bool 执行完成返回 true，否则返回 false
+- 消息发送工具
+  - `plugin('PushNotifier')->send( string $title, string $content )`
+  - `->type( ?string $type )` 设置推送类型，默认为配置中的 default 值
+  - `->source( ?string $source )` 设置消息来源，默认为 null
+  - `->request( ?string $recipient )` 执行发送操作
+    - $recipient: string|null 收件人，默认为配置中的默认收件人
+    - returns: bool 执行完成返回 true，否则返回 false
