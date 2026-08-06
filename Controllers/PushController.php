@@ -203,6 +203,7 @@ class PushController extends Controller {
                 'mail.mailers.smtp.username' => (string) $username,
                 'mail.mailers.smtp.password' => (string) $password,
                 'mail.mailers.smtp.timeout' => 15,
+                'mail.mailers.smtp.auto_tls' => false,
                 'mail.from.address' => (string) $username,
                 'mail.from.name' => $senderName,
             ] );
