@@ -11,6 +11,8 @@ class BuildMessageService {
      * @return array<string, string|null> 构建后的消息数组
      */
     public static function build( ?string $source, ?string $title, ?string $content ): array {
+        $title = trim( (string) $title );
+        $content = trim( (string) $content );
         switch ( $source ) {
             case 'baota':
                 return self::buildBaota( $source, $title, $content );

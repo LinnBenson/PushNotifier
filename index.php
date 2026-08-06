@@ -9,6 +9,7 @@ use Filament\Panel;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Log;
 use App\Plugins\PushNotifier\Models\NotifierRecord;
+use App\Plugins\PushNotifier\Support\BuildMessageService;
 
 /**
  * Push Notifier Plugin
@@ -21,7 +22,7 @@ return new class extends PluginProvider {
     public function __construct() {
         $this->name = '推送通知器';
         $this->description = '多渠道过滤式推送记录系统。';
-        $this->version = '1.1.3';
+        $this->version = '1.1.4';
         $this->author = 'System';
         $this->source = 'https://github.com/LinnBenson/PushNotifier/archive/refs/heads/main.zip';
         $this->setType( 1 );
@@ -90,5 +91,32 @@ return new class extends PluginProvider {
             Log::error( '卸载通知记录表失败：'.$throwable->getMessage() );
             return false;
         }
+    }
+
+    /**
+     * 发送通知。
+     * @param string $title 消息标题
+     * @param string $content 消息内容
+     * @param string|null $source 消息来源
+     * @param string|null $type 通知类型（telegram、bark、email）
+     * @return bool 发送成功返回 true，否则返回 false
+     */
+    public function send( string $title, string $content, ?string $source = null, ?string $type = null ): bool {
+        if ( !$type ) { $type = $this->config( 'default' ); }
+        $data = BuildMessageService::build( $source, $title, $content );
+        switch ( $type ) {
+            case 'telegram':
+                $result = ( new PushController() )->telegram( 0, $data['source'] ?? null, $data['title'], $data['content'] );
+                break;
+            case 'bark':
+                $result = ( new PushController() )->bark( 0, $data['source'] ?? null, $data['title'], $data['content'] );
+                break;
+            case 'email':
+                $result = ( new PushController() )->email( 0, $data['source'] ?? null, $data['title'], $data['content'] );
+                break;
+            default:
+                return false;
+        }
+        return true;
     }
 };

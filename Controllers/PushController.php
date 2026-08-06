@@ -262,15 +262,18 @@ class PushController extends Controller {
      * @return string|null 接收人
      */
     private function getRecipient( int $uid, string $type ): ?string {
-        switch ( $type ) {
-            case 'telegram':
-                return setting( 'system.telegram.uid' );
-            case 'bark':
-                return setting( 'system.bark.device' );
-            case 'email':
-                return setting( 'system.mail.recipient' );
-            default:
-                return null;
+        if ( $uid === 0 ) {
+            switch ( $type ) {
+                case 'telegram':
+                    return setting( 'system.telegram.uid' );
+                case 'bark':
+                    return setting( 'system.bark.device' );
+                case 'email':
+                    return setting( 'system.mail.recipient' );
+                default:
+                    return null;
+            }
         }
+        return null;
     }
 }
