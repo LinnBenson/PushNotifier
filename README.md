@@ -17,3 +17,4 @@
     - $content: string 消息内容
     - $source: string|null 消息来源（可选）
     - $type: string|null 通知类型（可选，默认使用配置中的 default 值）
+  - returns: bool 执行完成返回 true，否则返回 false

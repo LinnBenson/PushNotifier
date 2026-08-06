@@ -187,6 +187,8 @@ class PushController extends Controller {
         $port = setting( 'system.mail.port' ); // SMTP 端口
         $username = setting( 'system.mail.username' ); // SMTP 用户名
         $password = setting( 'system.mail.password' ); // SMTP 密码或授权码
+        $scheme = setting( 'system.mail.scheme', null ); // SMTP 协议
+        $scheme = $scheme === 'null' || empty( $scheme ) ? null : $scheme;
         $recipient = $this->getRecipient( $uid, 'email' ); // 收件人邮箱
         if ( !$host || !$port || !$username || !$password || empty( $recipient ) ) {
             return $this->saveRecord( $uid, 'email', $recipient, $source, $title, $content, false, 'The mail server configuration is incomplete.' );
@@ -197,7 +199,7 @@ class PushController extends Controller {
         $mailContent = $source ? "{$content}\n\nSource: {$source}" : (string) $content;
         try {
             config()->set( [
-                'mail.mailers.smtp.scheme' => (int) $port === 465 ? 'smtps' : null,
+                'mail.mailers.smtp.scheme' => $scheme,
                 'mail.mailers.smtp.host' => (string) $host,
                 'mail.mailers.smtp.port' => (int) $port,
                 'mail.mailers.smtp.username' => (string) $username,
