@@ -77,7 +77,7 @@ class PushController extends Controller {
      * @param string|null $content 通知内容
      * @return JsonResponse JSON 响应
      */
-    private function telegram( int $uid, ?string $source, ?string $title, ?string $content ): JsonResponse {
+    public function telegram( int $uid, ?string $source, ?string $title, ?string $content ): JsonResponse {
         $api = setting( 'system.telegram.api' );
         $user = $this->getRecipient( $uid, 'telegram' );
         if ( !$api || !$user ) {
@@ -124,7 +124,7 @@ class PushController extends Controller {
      * @param string $value 原始文本
      * @return string 转义后的文本
      */
-    private function escapeTelegramMarkdownV2( string $value ): string {
+    public function escapeTelegramMarkdownV2( string $value ): string {
         return str_replace(
             ['\\', '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'],
             ['\\\\', '\\_', '\\*', '\\[', '\\]', '\\(', '\\)', '\\~', '\\`', '\\>', '\\#', '\\+', '\\-', '\\=', '\\|', '\\{', '\\}', '\\.', '\\!'],
@@ -140,7 +140,7 @@ class PushController extends Controller {
      * @param string|null $content 通知内容
      * @return JsonResponse JSON 响应
      */
-    private function bark( int $uid, ?string $source, ?string $title, ?string $content ): JsonResponse {
+    public function bark( int $uid, ?string $source, ?string $title, ?string $content ): JsonResponse {
         $host = setting( 'system.bark.host' );
         $device = $this->getRecipient( $uid, 'bark' );
         if ( !$host || !$device ) {
@@ -182,7 +182,7 @@ class PushController extends Controller {
      * @param string|null $content 通知内容
      * @return JsonResponse JSON 响应
      */
-    private function email( int $uid, ?string $source, ?string $title, ?string $content ): JsonResponse {
+    public function email( int $uid, ?string $source, ?string $title, ?string $content ): JsonResponse {
         $host = setting( 'system.mail.host' ); // SMTP 主机
         $port = setting( 'system.mail.port' ); // SMTP 端口
         $username = setting( 'system.mail.username' ); // SMTP 用户名
