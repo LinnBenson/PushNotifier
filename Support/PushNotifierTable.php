@@ -43,7 +43,7 @@ class PushNotifierTable extends Page implements HasTable {
 
     protected static string $navigationPermission = 'push_notifier_records';
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBellAlert;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChatBubbleOvalLeftEllipsis;
 
     protected static ?string $slug = 'push-notifier-records';
 
@@ -242,9 +242,11 @@ class PushNotifierTable extends Page implements HasTable {
                     ->schema( [
                         DatePicker::make( 'created_from' )
                             ->label( '开始日期' )
+                            ->displayFormat( 'Y.m.d' )
                             ->native( false ),
                         DatePicker::make( 'created_until' )
                             ->label( '结束日期' )
+                            ->displayFormat( 'Y.m.d' )
                             ->native( false ),
                     ] )
                     ->columns( 2 )
@@ -334,8 +336,8 @@ class PushNotifierTable extends Page implements HasTable {
     /**
      * 页面信息
      */
-    public function getBreadcrumbs(): array { return [__( 'filament.groups.other' ), '通知记录']; }
-    public static function getNavigationLabel(): string { return '通知记录'; }
+    public function getBreadcrumbs(): array { return [__( 'filament.groups.other' ), '推送记录']; }
+    public static function getNavigationLabel(): string { return '推送记录'; }
     public function getTitle(): string { return '推送通知记录'; }
     public static function getNavigationGroup(): string|UnitEnum|null { return __( 'filament.groups.other' ); }
 }
